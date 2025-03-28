@@ -1,0 +1,80 @@
+// Add these models to prisma/schema.prisma
+
+// Conversation state management for WhatsApp
+model Conversation {
+  id            String    @id @default(cuid())
+  storeId       String
+  store         Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customerPhone String
+  currentState  String    @default("INIT") // State identifier
+  context       Json?     // Custom data for this conversation
+  lastMessageAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  isActive      Boolean   @default(true)
+  messages      Message[]
+  flowId        String?   // Optional reference to a specific flow
+
+  @@index([storeId])
+  @@index([customerPhone])
+  @@index([currentState])
+  @@index([isActive])
+}
+
+// Message history
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      MessageDirection
+  messageType    MessageType
+  content        String       // Text content
+  mediaUrl       String?      // URL of media if applicable
+  metadata       Json?        // Additional data (template info, interactive elements, etc.)
+  timestamp      DateTime     @default(now())
+  status         MessageStatus @default(SENT)
+
+  @@index([conversationId])
+  @@index([direction])
+  @@index([status])
+}
+
+// Conversation flow definitions
+model ConversationFlow {
+  id          String       @id @default(cuid())
+  storeId     String
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  states      Json         // Definition of states, transitions, and actions
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([storeId])
+  @@index([isActive])
+}
+
+enum MessageDirection {
+  INCOMING
+  OUTGOING
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  AUDIO
+  VIDEO
+  LOCATION
+  CONTACT
+  INTERACTIVE
+  TEMPLATE
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
